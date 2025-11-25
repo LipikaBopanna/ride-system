@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber Clone Pro</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        
+        .phone-frame {
+            width: 100%; max-width: 420px; height: 850px; margin: 20px auto;
+            background: white; border-radius: 40px; position: relative; overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 12px solid #2d2d2d;
+            display: flex; flex-direction: column;
+        }
+        
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .ui-overlay { position: relative; z-index: 10; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        .ui-card { pointer-events: auto; background: white; border-radius: 24px 24px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); }
+        .pointer-auto { pointer-events: auto; }
+        
+        [v-cloak] { display: none; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+        .slide-enter-from, .slide-leave-to { transform: translateY(100%); }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak class="min-h-screen flex items-center justify-center">
+    <div class="phone-frame">
+        
+        <!-- MAP LAYER -->
+        <div id="map"></div>
+
+        <!-- UI LAYER -->
+        <div class="ui-overlay">
+            
+            <!-- Header -->
+            <div v-if="view !== 'landing'" class="p-4 flex justify-between items-start pointer-auto">
+                <button v-if="!['rider_home', 'driver_home'].includes(view)" @click="view='landing'" class="bg-white p-3 rounded-full shadow-md"><span class="material-icons-round">arrow_back</span></button>
+                <div v-if="['rider_home', 'driver_home'].includes(view)" class="bg-white px-4 py-2 rounded-full shadow-md font-bold text-sm flex items-center gap-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full"></div> {{ view === 'rider_home' ? 'Rider Mode' : 'Driver Mode' }}
+                </div>
+                <button v-if="['rider_home', 'driver_home'].includes(view)" @click="logout" class="bg-white p-2 rounded-full shadow-md text-red-500"><span class="material-icons-round">logout</span></button>
+            </div>
+
+            <div class="flex-1"></div>
+
+            <!-- 1. LANDING -->
+            <transition name="slide">
+            <div v-if="view === 'landing'" class="ui-card p-8 pb-12">
+                <div class="text-center mb-10">
+                    <div class="w-20 h-20 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <span class="material-icons-round text-white text-5xl">local_taxi</span>
+                    </div>
+                    <h1 class="text-4xl font-bold mb-2">Uber</h1>
+                    <p class="text-gray-500">Move safely. Move freely.</p>
+                </div>
+                <div class="space-y-3">
+                    <button @click="view = 'rider_reg'" class="w-full bg-black text-white py-4 rounded-xl font-bold text-lg shadow-lg">I'm a Rider</button>
+                    <button @click="view = 'driver_reg'" class="w-full bg-gray-100 text-black py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition">I'm a Driver</button>
+                </div>
+            </div>
+            </transition>
+
+            <!-- 2. AUTH FLOWS -->
+            <transition name="slide">
+            <div v-if="['rider_reg', 'driver_reg', 'otp'].includes(view)" class="ui-card p-6 h-3/4 flex flex-col">
+                <div v-if="view === 'rider_reg'">
+                    <h2 class="text-2xl font-bold mb-6">Rider Signup</h2>
+                    <div class="space-y-4 mb-6">
+                        <input v-model="form.name" placeholder="Full Name" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                        <input v-model="form.phone" placeholder="Mobile Number" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                        <input v-model="form.email" placeholder="Email" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                    </div>
+                    <button @click="submitReg('rider')" class="w-full bg-black text-white py-4 rounded-xl font-bold">Next</button>
+                </div>
+
+                <div v-if="view === 'driver_reg'">
+                    <h2 class="text-2xl font-bold mb-4">Driver Signup</h2>
+                    <div class="space-y-3 mb-6 overflow-y-auto h-64 pr-2">
+                        <input v-model="form.name" placeholder="Full Name" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                        <input v-model="form.phone" placeholder="Mobile Number" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                        <select v-model="form.vehicle_type" class="w-full bg-gray-100 p-4 rounded-xl outline-none bg-white"><option value="car">Car</option><option value="auto">Auto</option></select>
+                        <input v-model="form.vehicle_model" placeholder="Vehicle Model (e.g. Swift)" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                        <input v-model="form.license_plate" placeholder="License Plate" class="w-full bg-gray-100 p-4 rounded-xl outline-none">
+                    </div>
+                    <button @click="submitReg('driver')" class="w-full bg-black text-white py-4 rounded-xl font-bold">Next</button>
+                </div>
+
+                <div v-if="view === 'otp'" class="text-center pt-10">
+                    <h2 class="text-2xl font-bold mb-2">Verify Number</h2>
+                    <p class="text-gray-500 mb-8">Code sent to {{ form.phone }} <br><strong>(Hint: 123456)</strong></p>
+                    <input v-model="otpInput" placeholder="000000" maxlength="6" class="text-center text-4xl tracking-[1rem] w-full border-b-2 border-black p-4 outline-none font-mono mb-10">
+                    <button @click="verifyOtp" class="w-full bg-black text-white py-4 rounded-xl font-bold">Verify</button>
+                </div>
+            </div>
+            </transition>
+
+            <!-- 3. RIDER HOME -->
+            <transition name="slide">
+            <div v-if="view === 'rider_home'" class="ui-card p-6 pb-8">
+                <!-- Ride Status Banner -->
+                <div v-if="ride.status && ride.status !== 'COMPLETED'" class="mb-4 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-r-xl shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-indigo-500 tracking-widest uppercase">STATUS</span>
+                        <span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-bold">{{ ride.status }}</span>
+                    </div>
+                    <div v-if="ride.driver" class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-2xl">🚗</div>
+                        <div>
+                            <p class="font-bold">{{ ride.driver.name }}</p>
+                            <p class="text-sm text-gray-500">{{ ride.driver.vehicle_model }} • {{ ride.driver.license_plate }}</p>
+                        </div>
+                    </div>
+                    <p v-else class="text-sm text-gray-500 flex items-center animate-pulse">Finding nearest driver...</p>
+                </div>
+
+                <!-- Tabs -->
+                <div v-if="!ride.id" class="flex p-1 bg-gray-100 rounded-xl mb-4">
+                    <button @click="tab='ride'" :class="tab==='ride'?'bg-white shadow-sm text-black':'text-gray-500'" class="flex-1 py-2 rounded-lg font-bold text-sm transition">Ride</button>
+                    <button @click="tab='commute'" :class="tab==='commute'?'bg-white shadow-sm text-black':'text-gray-500'" class="flex-1 py-2 rounded-lg font-bold text-sm transition">Commute Pass</button>
+                </div>
+
+                <!-- BOOK RIDE -->
+                <div v-if="tab === 'ride' && !ride.id">
+                    <div class="space-y-3 mb-4">
+                        <div class="relative">
+                            <span class="absolute left-4 top-4 text-green-600 material-icons-round text-sm">trip_origin</span>
+                            <input v-model="ride.pickup_name" readonly class="w-full bg-gray-100 p-3 pl-10 rounded-xl text-sm font-medium" value="Loading Location...">
+                            <button @click="useGps" class="absolute right-2 top-2 bg-white p-1 rounded shadow text-xs font-bold px-2">GPS</button>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-4 top-4 text-red-600 material-icons-round text-sm">place</span>
+                            <input v-model="searchQuery" @input="performSearch" placeholder="Where to? (e.g. Mall)" class="w-full bg-gray-100 p-3 pl-10 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none">
+                            
+                            <!-- Search Results -->
+                            <div v-if="searchResults.length" class="absolute bottom-full left-0 w-full bg-white rounded-xl shadow-xl border border-gray-100 max-h-48 overflow-y-auto z-50 mb-2">
+                                <div v-for="loc in searchResults" @click="selectDest(loc)" class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-0 text-sm flex items-center">
+                                    <span class="material-icons-round text-gray-400 mr-2 text-sm">location_on</span> {{ loc.name }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="ride.price" class="flex justify-between items-center mb-4 px-2 bg-gray-50 p-3 rounded-lg">
+                        <div><p class="font-bold text-sm">UberGo</p><p class="text-xs text-gray-500">~4 mins</p></div>
+                        <p class="text-2xl font-bold">₹{{ ride.price }}</p>
+                    </div>
+                    <button @click="requestRide" :disabled="!ride.price" class="w-full bg-black text-white py-4 rounded-xl font-bold shadow-lg disabled:bg-gray-300">Confirm Ride</button>
+                </div>
+
+                <!-- COMMUTE PASS -->
+                <div v-if="tab === 'commute'">
+                    <div v-if="!user.is_subscriber" class="text-center py-4">
+                        <div class="bg-yellow-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"><span class="material-icons-round text-yellow-600 text-3xl">workspace_premium</span></div>
+                        <h3 class="font-bold text-xl">Commute Pass</h3>
+                        <p class="text-sm text-gray-500 mb-6 px-4">Fixed prices. No daily booking.</p>
+                        <button @click="subscribe" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg">Subscribe ₹199/mo</button>
+                    </div>
+                    <div v-else>
+                        <div class="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Daily Schedule</h4>
+                            <div class="space-y-2 mb-3">
+                                <input v-model="commute.home_name" @input="searchCommute('home')" placeholder="Home" class="w-full p-2 bg-white border rounded text-sm">
+                                <input v-model="commute.work_name" @input="searchCommute('work')" placeholder="Work" class="w-full p-2 bg-white border rounded text-sm">
+                                <!-- Commute Search Dropdown -->
+                                <div v-if="commuteResults.length" class="absolute bg-white border rounded shadow-lg z-50 w-64"><div v-for="l in commuteResults" @click="selectCommuteLoc(l)" class="p-2 text-xs hover:bg-gray-100 cursor-pointer">{{ l.name }}</div></div>
+                            </div>
+                            <div class="flex gap-2">
+                                <input v-model="commute.am" type="time" class="w-full p-2 bg-white border rounded text-sm font-bold">
+                                <input v-model="commute.pm" type="time" class="w-full p-2 bg-white border rounded text-sm font-bold">
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="saveCommute" class="flex-1 bg-black text-white py-3 rounded-lg font-bold text-sm">Save</button>
+                            <button @click="alert('Time Altered')" class="flex-1 bg-blue-100 text-blue-700 py-3 rounded-lg font-bold text-sm">Alter</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </transition>
+
+            <!-- 4. DRIVER HOME -->
+            <transition name="slide">
+            <div v-if="view === 'driver_home'" class="ui-card p-6 pb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <div><h2 class="font-bold text-lg">{{ driver.name }}</h2><p class="text-xs text-gray-500">{{ driver.vehicle_model }}</p></div>
+                    <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">ONLINE</div>
+                </div>
+
+                <div v-if="!driverRide" class="bg-gray-50 p-6 rounded-xl text-center border-2 border-dashed border-gray-300">
+                    <span class="material-icons-round text-4xl text-gray-400 animate-spin mb-2">radar</span>
+                    <p class="font-bold text-gray-500">Finding Trips...</p>
+                </div>
+
+                <div v-else class="bg-white border-2 border-black rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-black text-white p-3 flex justify-between items-center">
+                        <span class="font-bold text-sm tracking-wide">NEW REQUEST</span>
+                        <span class="bg-green-500 text-black text-xs px-2 py-1 rounded font-bold">₹{{ driverRide.price }}</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-4 space-y-2">
+                            <div class="flex items-center"><span class="material-icons-round text-green-600 text-sm mr-2">circle</span><span class="text-sm font-bold">{{ driverRide.pickup_name }}</span></div>
+                            <div class="flex items-center"><span class="material-icons-round text-red-600 text-sm mr-2">place</span><span class="text-sm font-bold">{{ driverRide.dropoff_name }}</span></div>
+                        </div>
+                        <button v-if="driverRide.status === 'ASSIGNED'" @click="acceptRide" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold shadow">Accept Ride</button>
+                        <button v-if="driverRide.status === 'ONGOING'" @click="completeRide" class="w-full bg-red-600 text-white py-3 rounded-lg font-bold shadow">Complete Trip</button>
+                    </div>
+                </div>
+            </div>
+            </transition>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, reactive, toRefs, onMounted, watch } = Vue
+    const API = { AUTH: 'http://localhost:8000', USER: 'http://localhost:8001', DRIVER: 'http://localhost:9001', REQ: 'http://localhost:7001', GEO: 'http://localhost:8081' }
+
+    createApp({
+        setup() {
+            const s = reactive({
+                view: 'landing', tab: 'ride', loading: false,
+                form: { name: '', phone: '', email: '', vehicle_type: 'car', vehicle_model: '', license_plate: '' },
+                otpInput: '', user: {}, driver: {}, ride: {}, driverRide: null,
+                searchQuery: '', searchResults: [], rideEstimate: null,
+                commute: { am: '09:00', pm: '18:00', home_name: '', work_name: '' }, commuteResults: [], commuteTarget: ''
+            })
+
+            // MAP
+            let map, riderMarker, destMarker;
+            onMounted(() => {
+                map = L.map('map', { zoomControl: false }).setView([12.9716, 77.5946], 13)
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '' }).addTo(map)
+            })
+
+            const useGps = () => {
+                s.ride.pickup_name = "Locating...";
+                navigator.geolocation.getCurrentPosition(async p => {
+                    const lat = p.coords.latitude, lon = p.coords.longitude
+                    s.ride.pickup_lat = lat; s.ride.pickup_lon = lon
+                    map.setView([lat, lon], 15)
+                    if(riderMarker) map.removeLayer(riderMarker)
+                    riderMarker = L.marker([lat, lon]).addTo(map).bindPopup("You").openPopup()
+                    
+                    // Reverse Geocode Call
+                    try {
+                        const res = await axios.get(`${API.GEO}/reverse?lat=${lat}&lon=${lon}`)
+                        s.ride.pickup_name = res.data.name
+                    } catch(e) { s.ride.pickup_name = `${lat.toFixed(4)}, ${lon.toFixed(4)}` }
+                })
+            }
+
+            const performSearch = async () => {
+                if(s.searchQuery.length < 3) return
+                try {
+                    const res = await axios.get(`${API.GEO}/search?query=${s.searchQuery}`)
+                    s.searchResults = res.data
+                } catch(e) {}
+            }
+
+            const selectDest = async (loc) => {
+                s.ride.drop_lat = loc.lat; s.ride.drop_lon = loc.lon; s.ride.dropoff_name = loc.name
+                s.searchQuery = loc.name; s.searchResults = []
+                
+                if(destMarker) map.removeLayer(destMarker)
+                destMarker = L.marker([loc.lat, loc.lon]).addTo(map)
+                const group = new L.featureGroup([riderMarker, destMarker]);
+                map.fitBounds(group.getBounds().pad(0.2));
+
+                const res = await axios.post(`${API.REQ}/ride/calculate-price`, {
+                    pickup_lat: s.ride.pickup_lat, pickup_lon: s.ride.pickup_lon,
+                    dropoff_lat: loc.lat, dropoff_lon: loc.lon
+                })
+                s.ride.price = res.data.price
+            }
+
+            // AUTH & APP LOGIC (Same as before)
+            const submitReg = async (type) => { try { await axios.post(`${API.AUTH}/register/${type}`, s.form); s.view = 'otp' } catch(e){ alert("Error") } }
+            const verifyOtp = async () => { try { const res = await axios.post(`${API.AUTH}/verify/otp`, { phone: s.form.phone, otp: s.otpInput }); if (res.data.user_type === 'rider') { s.user = res.data.user; s.view = 'rider_home'; initRider() } else { s.driver = res.data.user; s.view = 'driver_home'; initDriver() } } catch(e){ alert("Invalid OTP") } }
+            const logout = () => location.reload()
+
+            const requestRide = async () => {
+                const res = await axios.post(`${API.REQ}/ride/request`, { user_id: s.user.id, pickup_name: s.ride.pickup_name, pickup_lat: s.ride.pickup_lat, pickup_lon: s.ride.pickup_lon, dropoff_name: s.ride.dropoff_name, drop_lat: s.ride.drop_lat, drop_lon: s.ride.drop_lon, price: s.ride.price })
+                s.ride = { ...s.ride, ...res.data }
+            }
+            const initRider = () => { setInterval(async () => { if(!s.ride.id) return; const res = await axios.get(`${API.USER}/ride-status/${s.ride.id}`); s.ride.status = res.data.status; if (res.data.driver) s.ride.driver = res.data.driver }, 3000) }
+            const initDriver = () => { setInterval(async () => { const res = await axios.get(`${API.DRIVER}/drivers/${s.driver.id}/assigned`); if(res.data.assigned) s.driverRide = res.data.ride }, 3000) }
+            const acceptRide = async () => { await axios.post(`${API.DRIVER}/drivers/${s.driver.id}/accept`) }
+            const completeRide = async () => { await axios.post(`${API.DRIVER}/drivers/${s.driver.id}/complete`); s.driverRide = null }
+            const subscribe = async () => { await axios.post(`${API.USER}/users/${s.user.id}/subscribe`); s.user.is_subscriber = true }
+            
+            // Commute
+            const searchCommute = async (t) => { s.commuteTarget = t; const q = t === 'home' ? s.commute.home_name : s.commute.work_name; if(q.length<3) return; const res = await axios.get(`${API.GEO}/search?query=${q}`); s.commuteResults = res.data }
+            const selectCommuteLoc = (l) => { if(s.commuteTarget==='home') s.commute.home_name = l.name; else s.commute.work_name = l.name; s.commuteResults = [] }
+            const saveCommute = () => alert("Schedule Updated")
+
+            return { ...toRefs(s), submitReg, verifyOtp, logout, useGps, performSearch, selectDest, requestRide, acceptRide, completeRide, subscribe, searchCommute, selectCommuteLoc, saveCommute }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>

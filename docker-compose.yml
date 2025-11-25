@@ -1,0 +1,91 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: uberdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 10
+
+  migrator:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
+      PYTHONPATH: "."
+    command: python app/run_migrations.py
+
+  auth-service:
+    build: .
+    restart: on-failure
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    ports:
+      - "8000:8000"  # <--- EXPOSED TO LOCALHOST
+    command: uvicorn app.auth_service.main:app --host 0.0.0.0 --port 8000 --reload
+
+  request-handler:
+    build: .
+    restart: on-failure
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    ports:
+      - "7001:7001" # <--- EXPOSED TO LOCALHOST
+    command: uvicorn app.request_handler.main:app --host 0.0.0.0 --port 7001 --reload
+
+  user-service:
+    build: .
+    restart: on-failure
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", REQUEST_HANDLER_URL: "http://request-handler:7001", PYTHONPATH: "." }
+    ports:
+      - "8001:6000" # <--- EXPOSED TO LOCALHOST (Host 8001 -> Container 6000)
+    command: uvicorn app.user_service.main:app --host 0.0.0.0 --port 6000 --reload
+
+  driver-service:
+    build: .
+    restart: on-failure
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    ports:
+      - "9001:9000" # <--- EXPOSED TO LOCALHOST (Host 9001 -> Container 9000)
+    command: uvicorn app.driver_service.main:app --host 0.0.0.0 --port 9000 --reload
+
+  # Background services don't need exposed ports for the demo script to work,
+  # but we keep them for logs.
+  matcher:
+    build: .
+    restart: on-failure
+    depends_on: { migrator: { condition: service_completed_successfully } }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    command: uvicorn app.matcher.main:app --host 0.0.0.0 --port 7002 --reload
+
+  notifier:
+    build: .
+    restart: on-failure
+    depends_on: { migrator: { condition: service_completed_successfully } }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    command: uvicorn app.notifier.main:app --host 0.0.0.0 --port 7003 --reload
+
+  scheduler:
+    build: .
+    restart: on-failure
+    depends_on: { migrator: { condition: service_completed_successfully } }
+    environment: { DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb", PYTHONPATH: "." }
+    command: uvicorn app.scheduler.main:app --host 0.0.0.0 --port 7004 --reload
+
+volumes:
+  postgres_data:
