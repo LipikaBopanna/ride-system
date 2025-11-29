@@ -1,12 +1,26 @@
+# Dockerfile
 FROM python:3.11-slim
-WORKDIR /app
+
+# Prevent Python from writing .pyc files
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set workdir
+WORKDIR /app
+
+# Copy requirement list
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
-COPY .env .env
+# Copy entire project
+COPY . .
 
-EXPOSE 7000 9000 6000
+# Default command overridden by docker-compose
+CMD ["python3"]
