@@ -10,23 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # One-time DB initializer (run once then you can remove or keep - safe)
-  db-init:
+  migrator:
     build: .
-    command: python -m app.db_init
+    command: python -m app.run_migrations
     depends_on:
       - db
-    environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
-      PYTHONPATH: "."
-    # don't expose ports for this service
-    restart: "no"
-
-  auth-service:
-    build: .
-    command: uvicorn app.auth_service.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
       PYTHONPATH: "."
@@ -34,42 +22,14 @@ services:
   user-service:
     build: .
     command: uvicorn app.user_service.main:app --host 0.0.0.0 --port 8001 --reload
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
     ports:
       - "8001:8001"
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
       PYTHONPATH: "."
-      REQUEST_HANDLER_URL: "http://request-handler:7001"
-
-  driver-service:
-    build: .
-    command: uvicorn app.driver_service.main:app --host 0.0.0.0 --port 9000 --reload
-    ports:
-      - "9000:9000"
-    environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
-      PYTHONPATH: "."
-
-  request-handler:
-    build: .
-    command: uvicorn app.request_handler.main:app --host 0.0.0.0 --port 7001 --reload
-    ports:
-      - "7001:7001"
-    environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/uberdb"
-      PYTHONPATH: "."
-
-  notifier:
-    build: .
-    command: uvicorn app.notifier.main:app --host 0.0.0.0 --port 7003 --reload
-    ports:
-      - "7003:7003"
-
-  matcher:
-    build: .
-    command: uvicorn app.matcher.main:app --host 0.0.0.0 --port 7002 --reload
-    ports:
-      - "7002:7002"
 
 volumes:
   postgres_data:

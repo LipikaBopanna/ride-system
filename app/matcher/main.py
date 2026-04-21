@@ -42,8 +42,14 @@ def run_matching_cycle():
             # Mark ride as REQUESTED (driver has been asked but not assigned)
             ride.status = "REQUESTED"
             ride.assigned_at = datetime.utcnow()
-            db.add(ride); db.commit()
+            best_driver.current_ride_id = ride.id
+            best_driver.available = False
+            db.add(ride)
+            db.add(best_driver)
+            db.commit()
             print(f"Matcher: Requesting Driver {best_driver.id} for Ride {ride.id} (dist {best_dist:.2f} km)")
+
+            available_drivers = [driver for driver in available_drivers if driver.id != best_driver.id]
 
             payload = {
                 "driver_id": best_driver.id,

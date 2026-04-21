@@ -1,6 +1,7 @@
 # app/common/schemas.py
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
+from datetime import time
 
 class RiderRegister(BaseModel):
     name: str
@@ -17,6 +18,12 @@ class DriverRegister(BaseModel):
 class OtpVerify(BaseModel):
     phone: str
     otp: str
+
+class RegistrationResult(BaseModel):
+    status: str
+    user_type: str
+    otp: str
+    user: Any
 
 class UserOut(BaseModel):
     id: int
@@ -80,3 +87,35 @@ class PriceEstimateRequest(BaseModel):
 class PriceEstimateResponse(BaseModel):
     distance_km: float
     price: float
+
+class CommuteSubscribeRequest(BaseModel):
+    user_id: int
+    pickup_lat: float
+    pickup_lon: float
+    drop_lat: float
+    drop_lon: float
+    morning_time: time
+    evening_time: time
+    fixed_price: float
+
+class CommuteSettingsOut(BaseModel):
+    id: int
+    user_id: int
+    home_lat: float
+    home_lon: float
+    work_lat: float
+    work_lon: float
+    morning_time: time
+    evening_time: time
+    fixed_price: float
+
+    class Config:
+        from_attributes = True
+
+class DriverAcceptRequest(BaseModel):
+    ride_id: int
+
+class GeoCodeResult(BaseModel):
+    name: str
+    lat: float
+    lon: float

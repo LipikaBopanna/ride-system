@@ -39,28 +39,30 @@ class Driver(Base):
 
 class Ride(Base):
     __tablename__ = "rides"
+
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=True)
 
-    pickup_name = Column(String, nullable=True)
-    pickup_lat = Column(Float, nullable=False)
-    pickup_lon = Column(Float, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    driver_id = Column(Integer, nullable=True)
+    driver_name = Column(String, nullable=True)
+    vehicle = Column(String, nullable=True)
 
-    dropoff_name = Column(String, nullable=True)
-    drop_lat = Column(Float, nullable=False)
-    drop_lon = Column(Float, nullable=False)
+    pickup = Column(String)
+    drop = Column(String)
+
+    date = Column(Date)
+    time = Column(Time)
+
+    ride_type = Column(String)   # COMMUTE / INSTANT
+    priority = Column(Integer)   # 1 = commute, 2 = instant
 
     status = Column(String, default="PENDING")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    assigned_at = Column(DateTime, nullable=True)
-    started_at = Column(DateTime, nullable=True)
-    ended_at = Column(DateTime, nullable=True)
-    notified = Column(Boolean, default=False)
 
-    price = Column(Float, nullable=True)
-    fixed_price = Column(Float, nullable=True)
-    is_carpool = Column(Boolean, default=False)
+    # 🔥 NEW
+    driver_name = Column(String, nullable=True)
+    vehicle_number = Column(String, nullable=True)
+
+    user = relationship("User")
 
 class CommuteSettings(Base):
     __tablename__ = "commute_settings"
@@ -79,7 +81,7 @@ class CommuteSettings(Base):
 class CommuteScheduleOverride(Base):
     __tablename__ = "commute_overrides"
     id = Column(Integer, primary_key=True, index=True)
-    commute_id = Column(Integer, ForeignKey("commute_settings.id"), nullable=False)
+    commute_id = Column(Integer, ForeignKey("commute_settings.id"), nullable=True)
     date = Column(Date, nullable=False)
     morning_ride_status = Column(String, default="SCHEDULED")
     morning_ride_time = Column(Time, nullable=True)

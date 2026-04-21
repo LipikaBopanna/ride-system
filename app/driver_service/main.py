@@ -4,7 +4,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from app.common.db import get_db, engine, SessionLocal
+from app.common.db import get_db
 from app.common import models, schemas
 from datetime import datetime
 
@@ -39,25 +39,26 @@ def get_assigned(driver_id: int, db: Session = Depends(get_db)):
     }}
 
 @app.post("/drivers/{driver_id}/accept")
-def driver_accept(driver_id: int, db: Session = Depends(get_db)):
-    # Accept only rides in REQUESTED status directed to this driver (matcher set driver.current_ride_id OR matcher left as available driver)
-    # Simpler: find a ride with driver_id == NULL but status REQUESTED and pick the one that matches driver's current_ride_id if set.
+def driver_accept(driver_id: int, req: schemas.DriverAcceptRequest, db: Session = Depends(get_db)):
+    driver = db.query(models.Driver).filter(models.Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    if not driver.is_verified:
+        raise HTTPException(status_code=403, detail="Driver is not verified")
+
     ride = db.query(models.Ride).filter(
+        models.Ride.id == req.ride_id,
         models.Ride.status == "REQUESTED"
-    ).order_by(models.Ride.assigned_at).first()
+    ).first()
 
     if not ride:
-        raise HTTPException(status_code=404, detail="No REQUESTED ride available to accept")
+        raise HTTPException(status_code=404, detail="Ride is not available for acceptance")
 
-    # assign this driver
     ride.driver_id = driver_id
     ride.status = "ACCEPTED"
     ride.assigned_at = datetime.utcnow()
-
-    driver = db.query(models.Driver).filter(models.Driver.id == driver_id).first()
-    if driver:
-        driver.available = False
-        driver.current_ride_id = ride.id
+    driver.available = False
+    driver.current_ride_id = ride.id
 
     db.add(ride)
     db.add(driver)
@@ -85,3 +86,30 @@ def driver_accept(driver_id: int, db: Session = Depends(get_db)):
     return {"success": True, "ride": {
         "id": ride.id, "status": ride.status, "driver_id": ride.driver_id
     }}
+
+@app.post("/drivers/{driver_id}/reject")
+def driver_reject(driver_id: int, req: schemas.DriverAcceptRequest, db: Session = Depends(get_db)):
+    driver = db.query(models.Driver).filter(models.Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    ride = db.query(models.Ride).filter(
+        models.Ride.id == req.ride_id,
+        models.Ride.status == "REQUESTED"
+    ).first()
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride is not available for rejection")
+
+    if driver.current_ride_id != ride.id:
+        raise HTTPException(status_code=409, detail="Ride is not assigned to this driver")
+
+    driver.current_ride_id = None
+    driver.available = True
+    ride.status = "PENDING"
+    ride.assigned_at = None
+
+    db.add(driver)
+    db.add(ride)
+    db.commit()
+
+    return {"success": True, "ride": {"id": ride.id, "status": ride.status}}

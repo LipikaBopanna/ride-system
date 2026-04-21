@@ -1,561 +1,382 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>UrbanGo</title>
+<title>Ride System</title>
 
-    <!-- Vue -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<style>
+body{
+    background:#0b1b2b;
+    color:white;
+    font-family:Arial;
+    padding:30px;
+}
+button{
+    background:#eaff00;
+    border:none;
+    padding:10px 20px;
+    margin:10px;
+    cursor:pointer;
+}
+.card{
+    background:#1e2d3f;
+    padding:15px;
+    margin-top:15px;
+    border-radius:10px;
+}
+.hidden{ display:none; }
+input, select{
+    padding:8px;
+    margin:5px;
+}
+</style>
 
-    <!-- axios -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
-
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Material icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-
-    <style>
-        body {
-            margin: 0; padding: 0;
-            background: #111; color: white;
-            font-family: Arial, sans-serif;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh;
-        }
-        [v-cloak] { display: none; }
-
-        .phone-frame {
-            width: 400px; height: 800px; background: #000;
-            border: 10px solid #333; border-radius: 40px;
-            overflow: hidden; position: relative;
-            box-shadow: 0 0 50px rgba(255, 77, 166, 0.2);
-            display: flex; flex-direction: column;
-        }
-
-        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.6; }
-
-        .ui-layer { position: relative; z-index: 10; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
-
-        .ui-content {
-            pointer-events: auto;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            border-radius: 24px 24px 0 0;
-            padding: 20px; margin-top: auto;
-            border-top: 1px solid #333;
-        }
-
-        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
-
-        .btn {
-            width: 100%; padding: 14px; border-radius: 12px;
-            font-weight: bold; cursor: pointer; border: none;
-            transition: 0.2s; font-size: 16px;
-            text-align: center; margin-bottom: 10px;
-        }
-        .btn-primary { background: linear-gradient(45deg, #ff4da6, #ff944d); color: black; }
-        .btn-secondary { background: transparent; border: 2px solid #ff944d; color: #ff944d; }
-        .btn-danger { background: rgba(255, 0, 0, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; }
-
-        .input-box {
-            width: 100%; padding: 14px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: white; margin-bottom: 12px; font-size: 16px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 20px; border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .tabs {
-            display: flex;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 4px; margin-bottom: 20px;
-        }
-        .tab {
-            flex: 1; padding: 10px; cursor: pointer;
-            text-align: center; border-radius: 8px;
-            color: #aaa; font-weight: bold;
-        }
-        .tab.active { background: #333; color: #ff944d; }
-
-        select.input-box {
-            appearance: none;
-            background-color: black !important;
-            color: #ff4da6 !important;
-        }
-    </style>
 </head>
 
 <body>
-<div id="app" v-cloak>
-    <div class="phone-frame">
 
-        <div id="map"></div>
+<h1>Ride System</h1>
 
-        <div class="ui-layer">
+<!-- LOGIN -->
+<div id="login">
+    <button onclick="showRider()">Login as Rider</button>
+    <button onclick="showDriver()">Login as Driver</button>
+</div>
 
-            <!-- HEADER -->
-            <div v-if="view !== 'landing'" class="header">
-                <button v-if="view!=='rider_home' && view!=='driver_home'"
-                        @click="view='landing'"
-                        style="background:none;border:none;color:white;">
-                    <span class="material-icons-round">arrow_back</span>
-                </button>
-                <div v-if="view==='rider_home'" style="color:#ff944d;font-weight:bold;">RIDER MODE</div>
-                <div v-if="view==='driver_home'" style="color:#ff944d;font-weight:bold;">DRIVER MODE</div>
+<!-- RIDER LOGIN -->
+<div id="riderLogin" class="hidden">
+    <h3>Rider Login</h3>
+    <input id="name" placeholder="Name"><br>
+    <input id="email" placeholder="Email"><br>
+    <input id="phone" placeholder="Phone"><br>
+    <button onclick="loginRider()">Login</button>
+</div>
 
-                <button v-if="view==='rider_home'||view==='driver_home'"
-                        @click="logout"
-                        style="background:none;border:none;color:#ff4d4d;">
-                    <span class="material-icons-round">logout</span>
-                </button>
-            </div>
+<!-- RIDER DASHBOARD -->
+<div id="riderDash" class="hidden">
+    <h3>Rider Dashboard</h3>
+    <button onclick="showCommute()">Commute Pass</button>
+    <button onclick="bookInstant()">Normal Booking</button>
 
-            <div style="flex:1;"></div>
+    <div id="commuteBox" class="card hidden">
 
-            <!-- LANDING -->
-            <div v-if="view==='landing'" class="ui-content">
-                <div style="text-align:center;margin-bottom:40px;">
-                    <span class="material-icons-round" style="font-size:80px;color:#ff4da6;">local_taxi</span>
-                    <h1 style="font-size:40px;background:linear-gradient(45deg,#ff4da6,#ff944d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-                        UrbanGo
-                    </h1>
-                    <p style="color:#aaa;">Premium Commutes.</p>
-                </div>
+        <select id="pickup">
+            <option>Whitefield</option>
+            <option>Koramangala</option>
+            <option>Indiranagar</option>
+            <option>BTM</option>
+            <option>Jayanagar</option>
+            <option>Electronic City</option>
+        </select>
 
-                <button class="btn btn-primary" @click="view='rider_reg'">I'm a Rider</button>
-                <button class="btn btn-secondary" @click="view='driver_reg'">I'm a Driver</button>
-            </div>
+        <select id="drop">
+            <option>MG Road</option>
+            <option>Hebbal</option>
+            <option>Marathahalli</option>
+            <option>Yelahanka</option>
+        </select>
 
-            <!-- RIDER REGISTER -->
-            <div v-if="view==='rider_reg'" class="ui-content">
-                <h2>Create Account</h2>
-                <input v-model="form.name" placeholder="Full Name" class="input-box">
-                <input v-model="form.phone" maxlength="10" placeholder="Phone Number" class="input-box">
-                <input v-model="form.email" placeholder="Email" class="input-box">
-                <button class="btn btn-primary" @click="register('rider')">Next</button>
-            </div>
+        <br>
 
-            <!-- DRIVER REGISTER -->
-            <div v-if="view==='driver_reg'" class="ui-content">
-                <h2>Partner Signup</h2>
-                <input v-model="form.name" placeholder="Full Name" class="input-box">
-                <input v-model="form.phone" maxlength="10" placeholder="Phone Number" class="input-box">
+        Pickup Time:
+        <input type="time" id="pickupTime"><br>
 
-                <select v-model="form.vehicle_type" class="input-box">
-                    <option value="car">Car</option>
-                    <option value="auto">Auto</option>
-                </select>
+        Return Time:
+        <input type="time" id="returnTime"><br>
 
-                <input v-model="form.vehicle_model" placeholder="Vehicle Model" class="input-box">
-                <input v-model="form.license_plate" placeholder="License Plate" class="input-box">
-                <button class="btn btn-primary" @click="register('driver')">Next</button>
-            </div>
+        Ride Type:
+        <select id="rideType">
+            <option value="one">One Way</option>
+            <option value="two">Two Way</option>
+        </select>
 
-            <!-- OTP -->
-            <div v-if="view==='otp'" class="ui-content" style="text-align:center;">
-                <h2>Verification</h2>
-                <p style="color:#aaa;">Enter OTP sent to {{ form.phone }}<br>Hint: 123456</p>
-                <input v-model="otpInput" maxlength="6" class="input-box" style="text-align:center;font-size:24px;">
-                <button class="btn btn-primary" @click="verifyOtp">Verify</button>
-            </div>
+        <br>
 
-            <!-- RIDER HOME -->
-            <div v-if="view==='rider_home'" class="ui-content">
+        <input type="checkbox" id="weekend"> Include Weekends
 
-                <div v-if="ride.status==='ACCEPTED'" class="card" style="border-left:4px solid #ff4da6;">
-                    <div style="font-weight:bold;">Driver Assigned</div>
-                    <div>{{ ride.driver.name }}</div>
-                    <div style="color:#aaa;">{{ ride.driver.vehicle_model }} • {{ ride.driver.license_plate }}</div>
-                </div>
+        <br>
 
-                <div class="tabs">
-                    <div class="tab" :class="{active:tab==='ride'}" @click="tab='ride'">Book Ride</div>
-                    <div class="tab" :class="{active:tab==='commute'}" @click="tab='commute'">Commute Pass</div>
-                </div>
+        <button onclick="calc()">Calculate</button>
+        <div id="price"></div>
 
-                <!-- BOOK RIDE -->
-                <div v-if="tab==='ride'">
-                    <div class="card">
+        <button onclick="confirmRide()">Confirm</button>
 
-                        <label>PICKUP</label>
-                        <div style="display:flex;gap:10px;">
-                            <input v-model="pickupName" readonly class="input-box">
-                            <button class="btn btn-secondary" style="width:90px;" @click="useGps">GPS</button>
-                        </div>
-
-                        <label>DROP</label>
-                        <select v-model="dropLocation" class="input-box" @change="calcPrice">
-                            <option disabled value="">Destination</option>
-                            <option v-for="loc in places" :key="loc.name" :value="loc">{{ loc.name }}</option>
-                        </select>
-                    </div>
-
-                    <div v-if="fare" style="display:flex;justify-content:space-between;margin-bottom:20px;">
-                        <span>Fare</span>
-                        <span style="color:#ff944d;">₹{{ fare }}</span>
-                    </div>
-
-                    <button class="btn btn-primary" :disabled="!fare" @click="requestRide">Confirm Ride</button>
-                </div>
-
-                <!-- COMMUTE PASS -->
-                <div v-if="tab==='commute'">
-                    <div class="card">
-
-                        <label>Home Location</label>
-                        <select v-model="commute.home" class="input-box" @change="calcCommute">
-                            <option disabled value="">Home</option>
-                            <option v-for="loc in places" :value="loc">{{ loc.name }}</option>
-                        </select>
-
-                        <label>Work Location</label>
-                        <select v-model="commute.work" class="input-box" @change="calcCommute">
-                            <option disabled value="">Work</option>
-                            <option v-for="loc in places" :value="loc">{{ loc.name }}</option>
-                        </select>
-
-                        <label>Pickup Time (Morning)</label>
-                        <input type="time" v-model="commute.morning" class="input-box">
-
-                        <label>Pickup Time (Evening)</label>
-                        <input type="time" v-model="commute.evening" class="input-box">
-                    </div>
-
-                    <div v-if="commute.monthly_cost" style="display:flex;justify-content:space-between;margin-bottom:20px;">
-                        <span>Monthly Cost</span>
-                        <span style="color:#ff944d;">₹{{ commute.monthly_cost }}</span>
-                    </div>
-
-                    <button class="btn btn-primary"
-                            :disabled="!commute.monthly_cost"
-                            @click="confirmCommute">
-                        Confirm Commute Pass
-                    </button>
-                </div>
-            </div>
-
-            <!-- DRIVER POPUP -->
-            <div v-if="incomingRide" style="position:fixed;left:20px;right:20px;bottom:200px;background:#111;border:1px solid #ff944d;padding:16px;border-radius:12px;">
-                <div style="font-weight:bold;color:#ff944d;">New Ride Request</div>
-                <div>Pickup: {{ incomingRide.pickup_name }}</div>
-                <div>Drop: {{ incomingRide.dropoff_name }}</div>
-                <div style="display:flex;gap:10px;margin-top:10px;">
-                    <button class="btn btn-primary" @click="acceptIncoming">Accept</button>
-                    <button class="btn btn-secondary" @click="incomingRide=null">Reject</button>
-                </div>
-            </div>
-
-            <!-- DRIVER HOME -->
-            <div v-if="view==='driver_home'" class="ui-content">
-                <h2>{{ driver.name }}</h2>
-                <div style="color:#aaa;">{{ driver.vehicle_model }}</div>
-
-                <div v-if="!currentRide" class="card" style="text-align:center;">
-                    <span class="material-icons-round" style="font-size:40px;color:#777;">radar</span>
-                    <p style="color:#aaa;">Waiting for rides...</p>
-                </div>
-
-                <div v-if="currentRide" class="card">
-                    <b style="color:#ff944d;">Ride</b>
-                    <div>Pickup: {{ currentRide.pickup_name }}</div>
-                    <div>Drop: {{ currentRide.dropoff_name }}</div>
-
-                    <button v-if="currentRide.status==='ASSIGNED'" class="btn btn-primary" @click="acceptRide">Accept Ride</button>
-                    <button v-if="currentRide.status==='ONGOING'" class="btn btn-danger" @click="finishRide">Finish</button>
-                </div>
-            </div>
-
-        </div>
     </div>
+
+    <div id="myrides"></div>
+
+</div>
+
+<!-- DRIVER LOGIN -->
+<div id="driverLogin" class="hidden">
+    <h3>Driver Login</h3>
+    <input id="dname" placeholder="Name"><br>
+    <input id="demail" placeholder="Email"><br>
+    <input id="dphone" placeholder="Phone"><br>
+    <input id="vehicle" placeholder="Vehicle"><br>
+    <button onclick="loginDriver()">Login</button>
+</div>
+
+<!-- DRIVER DASHBOARD -->
+<div id="driverDash" class="hidden">
+    <h3>Driver Dashboard</h3>
+    <button onclick="loadRides()">View Rides</button>
+    <div id="rides"></div>
 </div>
 
 <script>
-const { createApp, reactive, onMounted, toRefs } = Vue;
+const BASE = "http://127.0.0.1:8001";
 
-createApp({
-    setup() {
-        // ----------------------------------------
-        // REACTIVE STATE
-        // ----------------------------------------
-        const s = reactive({
-            view: "landing",
-            form: { name:"", phone:"", email:"", vehicle_type:"", vehicle_model:"", license_plate:"" },
-            otpInput: "",
-            user: null,
-            driver: null,
-            pickupName: "",
-            pickup: null,
-            dropLocation: "",
-            fare: null,
-            ride: {},
-            tab: "ride",
+let driver = { name:"", vehicle:"" };
+let rideCreated = false;
 
-            commute: {
-                home: "",
-                work: "",
-                morning: "",
-                evening: "",
-                distance: 0,
-                monthly_cost: null
-            },
+// =====================
+// LOGIN
+// =====================
+function showRider() {
+  const login = document.getElementById("login");
+  const rider = document.getElementById("riderLogin");
 
-            currentRide: null,
-            incomingRide: null,
-            ws: null
-        });
+  if (!login || !rider) {
+    console.error("Element missing:", { login, rider });
+    return;
+  }
 
-        // ----------------------------------------
-        // API ROUTES
-        // ----------------------------------------
-        const API = {
-            AUTH: "http://127.0.0.1:8000",
-            USER: "http://127.0.0.1:8001",
-            DRIVER: "http://127.0.0.1:9000",
-            REQ: "http://127.0.0.1:7001",
-            NOTIFY: "http://127.0.0.1:7003"
-        };
+  login.style.display = "none";
+  rider.classList.remove("hidden");
+}
 
-        // ----------------------------------------
-        // 25 BANGALORE LOCATIONS
-        // ----------------------------------------
-        const places = [
-            {name:"Koramangala",lat:12.9345,lon:77.6110},
-            {name:"Indiranagar",lat:12.9716,lon:77.6412},
-            {name:"Whitefield",lat:12.9698,lon:77.7500},
-            {name:"BTM Layout",lat:12.9166,lon:77.6101},
-            {name:"Electronic City",lat:12.8390,lon:77.6770},
-            {name:"HSR Layout",lat:12.9121,lon:77.6446},
-            {name:"Marathahalli",lat:12.9569,lon:77.7011},
-            {name:"Hebbal",lat:13.0358,lon:77.5970},
-            {name:"MG Road",lat:12.9756,lon:77.6047},
-            {name:"Rajajinagar",lat:12.9916,lon:77.5520},
-            {name:"Banashankari",lat:12.9182,lon:77.5736},
-            {name:"JP Nagar",lat:12.9057,lon:77.5850},
-            {name:"Kengeri",lat:12.9177,lon:77.4858},
-            {name:"Yelahanka",lat:13.1007,lon:77.5963},
-            {name:"Bellandur",lat:12.9304,lon:77.6762},
-            {name:"Sarjapur",lat:12.8600,lon:77.7850},
-            {name:"Vijayanagar",lat:12.9730,lon:77.5301},
-            {name:"Majestic",lat:12.9784,lon:77.5720},
-            {name:"Basavanagudi",lat:12.9416,lon:77.5650},
-            {name:"Domlur",lat:12.9550,lon:77.6380},
-            {name:"Ulsoor",lat:12.9833,lon:77.6280},
-            {name:"Hoodi",lat:12.9960,lon:77.7140},
-            {name:"Nagawara",lat:13.0282,lon:77.6250},
-            {name:"Peenya",lat:13.0500,lon:77.5150},
-            {name:"Brookefield",lat:12.9690,lon:77.7180}
-        ];
+function showDriver() {
+  const login = document.getElementById("login");
+  const driver = document.getElementById("driverLogin");
 
-        // ----------------------------------------
-        // INIT MAP
-        // ----------------------------------------
-        onMounted(() => {
-            s.map = L.map("map").setView([12.9716,77.5946], 12);
-            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(s.map);
-        });
+  if (!login || !driver) {
+    console.error("Element missing:", { login, driver });
+    return;
+  }
 
-        // ----------------------------------------
-        // GPS PICKUP
-        // ----------------------------------------
-        const useGps = () => {
-            navigator.geolocation.getCurrentPosition(pos => {
-                s.pickup = pos.coords;
-                s.pickupName = `GPS: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-            });
-        };
+  login.style.display = "none";
+  driver.classList.remove("hidden");
+}
+async function loadMyRides(){
+    let res = await fetch(`${BASE}/user/rides?user_id=${rider.user_id}`);
+    let data = await res.json();
 
-        // ----------------------------------------
-        // REGISTER
-        // ----------------------------------------
-        const register = async (role) => {
-            const url = role==="rider" ? API.AUTH+"/register/rider" : API.AUTH+"/register/driver";
-            await axios.post(url, s.form);
-            s.view = "otp";
-        };
+    let container = document.getElementById("myrides");
+    container.innerHTML = "<h4>My Ride</h4>";
 
-        // ----------------------------------------
-        // VERIFY OTP
-        // ----------------------------------------
-        const verifyOtp = async () => {
-            const res = await axios.post(API.AUTH+"/verify/otp", {
-                phone: s.form.phone,
-                otp: s.otpInput
-            });
-
-            if (res.data.user_type === "rider") {
-                s.user = res.data.user;
-                s.view = "rider_home";
-                connectRiderSSE();
-            } else {
-                s.driver = res.data.user;
-                s.view = "driver_home";
-                connectDriverSSE();
-            }
-        };
-
-        // ----------------------------------------
-        // PRICE CALCULATION FOR NORMAL RIDE
-        // ----------------------------------------
-        const calcPrice = async () => {
-            if (!s.pickup || !s.dropLocation) return;
-
-            const res = await axios.post(API.REQ+"/ride/calculate-price", {
-                pickup_lat: s.pickup.latitude,
-                pickup_lon: s.pickup.longitude,
-                dropoff_lat: s.dropLocation.lat,
-                dropoff_lon: s.dropLocation.lon
-            });
-
-            s.fare = res.data.price;
-        };
-
-        // ----------------------------------------
-        // REQUEST NORMAL RIDE
-        // ----------------------------------------
-        const requestRide = async () => {
-            const res = await axios.post(API.REQ+"/ride/request", {
-                user_id: s.user.id,
-                pickup_lat: s.pickup.latitude,
-                pickup_lon: s.pickup.longitude,
-                pickup_name: s.pickupName,
-                drop_lat: s.dropLocation.lat,
-                drop_lon: s.dropLocation.lon,
-                dropoff_name: s.dropLocation.name,
-                price: s.fare
-            });
-
-            s.ride = res.data;
-            connectRideWS(s.ride.id);
-        };
-
-        // ----------------------------------------
-        // COMMUTE PASS CALCULATION
-        // ----------------------------------------
-        const haversine = (lat1, lon1, lat2, lon2) => {
-            function toRad(x){ return x * Math.PI / 180; }
-            const R = 6371;
-            let dLat = toRad(lat2 - lat1);
-            let dLon = toRad(lon2 - lon1);
-            let a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-            return 2 * R * Math.asin(Math.sqrt(a));
-        };
-
-        const calcCommute = () => {
-            if(!s.commute.home || !s.commute.work) return;
-
-            let d = haversine(
-                s.commute.home.lat, s.commute.home.lon,
-                s.commute.work.lat, s.commute.work.lon
-            );
-
-            s.commute.distance = d.toFixed(2);
-
-            let one_way = 18 * d;  // ₹18 per km
-            let daily = one_way * 2;
-            let monthly = daily * 22;   // weekdays only
-
-            s.commute.monthly_cost = Math.round(monthly);
-        };
-
-        // ----------------------------------------
-        // CONFIRM COMMUTE PASS
-        // ----------------------------------------
-        const confirmCommute = async () => {
-            await axios.post(API.USER + "/commute/setup", {
-                user_id: s.user.id,
-                home_lat: s.commute.home.lat,
-                home_lon: s.commute.home.lon,
-                work_lat: s.commute.work.lat,
-                work_lon: s.commute.work.lon,
-                morning_time: s.commute.morning,
-                evening_time: s.commute.evening,
-                fixed_price: s.commute.monthly_cost
-            });
-            alert("Commute Pass Activated Successfully!");
-        };
-
-        // ----------------------------------------
-        // WS Rider
-        // ----------------------------------------
-        const connectRideWS = (rideId) => {
-            s.ws = new WebSocket(`ws://127.0.0.1:7001/ws/rides/${rideId}`);
-
-            s.ws.onmessage = (msg) => {
-                const data = JSON.parse(msg.data);
-                if (data.event === "assigned") {
-                    s.ride.status = "ASSIGNED";
-                    s.ride.driver = data.payload.driver;
-                }
-            };
-        };
-
-        // ----------------------------------------
-        // SSE Rider
-        // ----------------------------------------
-        const connectRiderSSE = () => {
-            const es = new EventSource(`${API.NOTIFY}/events/rider/${s.user.id}`);
-
-            es.onmessage = (e) => {
-                const msg = JSON.parse(e.data);
-                if (msg.type === "ride_accepted") {
-                    s.ride.status = "ACCEPTED";
-                    s.ride.driver = msg.driver;
-                }
-            };
-        };
-
-        // ----------------------------------------
-        // SSE Driver
-        // ----------------------------------------
-        const connectDriverSSE = () => {
-            const es = new EventSource(`${API.NOTIFY}/events/driver/${s.driver.id}`);
-
-            es.onmessage = (e) => {
-                const msg = JSON.parse(e.data);
-                if (msg.type === "ride_request") {
-                    s.incomingRide = msg.ride;
-                }
-            };
-        };
-
-        // ----------------------------------------
-        // DRIVER ACCEPT RIDE
-        // ----------------------------------------
-        const acceptIncoming = async () => {
-            await axios.post(`${API.DRIVER}/drivers/${s.driver.id}/accept`);
-            s.incomingRide = null;
-        };
-
-        const logout = () => location.reload();
-
-        return {
-            ...toRefs(s),
-            places,
-            register,
-            verifyOtp,
-            useGps,
-            calcPrice,
-            requestRide,
-            calcCommute,
-            confirmCommute,
-            acceptIncoming,
-            logout
-        };
+    // 🚨 if no rides
+    if(data.length === 0){
+        container.innerHTML += `<div class="card">No rides booked yet</div>`;
+        return;
     }
-}).mount("#app");
+
+    // 🔥 show ONLY ONE (latest ride for clean UI)
+    let r = data[data.length - 1];
+
+    container.innerHTML += `
+        <div class="card">
+            <b>${r.pickup} → ${r.drop}</b><br>
+            Time: ${r.time} | ${r.date}<br>
+            Type: ${r.type}<br>
+            Status: ${r.status}<br>
+
+            ${
+                r.status === "ACCEPTED"
+                ? `<span style="color:lightgreen">
+                    Driver: ${r.driver} 🚗 (${r.vehicle})
+                  </span>`
+                : `<span style="color:orange">Waiting for driver...</span>`
+            }
+        </div>
+    `;
+}
+async function loadDriverRides() {
+    let res = await fetch(`${BASE}/match/rides`);
+    let data = await res.json();
+
+    let box = document.getElementById("driverRides");
+    box.innerHTML = "";
+
+    data.forEach(r => {
+        box.innerHTML += `
+        <div>
+            Ride ID: ${r.ride_id} <br>
+            User: ${r.name} <br>
+            Status: ${r.status} <br>
+
+            ${
+                r.status === "PENDING"
+                ? `<button onclick="acceptRide(${r.ride_id})">Accept</button>`
+                : `<span style="color:lightgreen">Accepted</span>`
+            }
+        </div><br>`;
+    });
+}
+async function loadRides(){
+    try{
+        let res = await fetch(BASE + "/match/rides");
+        let data = await res.json();
+
+        let container = document.getElementById("rides");
+        container.innerHTML = "";
+
+        // 🔥 remove duplicates
+        let unique = {};
+        data.forEach(r => {
+            unique[r.ride_id] = r;
+        });
+
+        let rides = Object.values(unique);
+
+        rides.forEach(r => {
+            container.innerHTML += `
+                <div style="margin:10px;padding:10px;background:#1f2c3d;border-radius:8px">
+                    <b>Ride ID:</b> ${r.ride_id} <br>
+                    <b>User:</b> ${r.name} <br>
+                    <b>Route:</b> ${r.pickup} → ${r.drop} <br>
+                    <b>Time:</b> ${r.time} <br>
+                    <b>Type:</b> ${r.type} <br>
+                    <b>Priority:</b> ${r.priority} <br>
+                    <b>Status:</b> ${r.status} <br>
+
+                    ${
+                        r.status === "PENDING"
+                        ? `<button onclick="acceptRide(${r.ride_id})">Accept</button>`
+                        : `<span style="color:lightgreen">Accepted</span>`
+                    }
+                </div>
+            `;
+        });
+
+    }catch(err){
+        console.log(err);
+    }
+}
+async function acceptRide(id) {
+    await fetch(`${BASE}/accept/${id}?driver_name=${driver.name}&vehicle=${driver.vehicle}`, {
+        method: "POST"
+    });
+
+    // 🔥 THIS IS THE FIX
+    loadRides(); 
+}
+
+let rider = { user_id: 0, name: "" };
+
+async function loginRider(){
+    if(rider.user_id){
+        document.getElementById("riderLogin").classList.add("hidden");
+        document.getElementById("riderDash").classList.remove("hidden");
+        loadMyRides();
+        return;
+    }
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+    let phone = document.getElementById("phone").value;
+
+    let res = await fetch(`${BASE}/create-user?name=${name}&email=${email}&phone=${phone}`, {
+        method: "POST"
+    });
+
+    let data = await res.json();
+
+    rider.user_id = data.id;   // 🔥 REAL USER ID FROM DB
+    rider.name = name;
+
+    document.getElementById("riderLogin").classList.add("hidden");
+    document.getElementById("riderDash").classList.remove("hidden");
+    loadMyRides();
+}
+
+function loginDriver(){
+    driver.name = document.getElementById("dname").value;
+    driver.vehicle = document.getElementById("vehicle").value;
+
+    document.getElementById("driverLogin").classList.add("hidden");
+    document.getElementById("driverDash").classList.remove("hidden");
+    loadDriverRides();
+}
+
+function showCommute(){
+    document.getElementById("commuteBox").classList.remove("hidden");
+}
+
+async function bookInstant(){
+    try{
+        let pickup = document.getElementById("pickup").value;
+        let drop = document.getElementById("drop").value;
+
+        let res = await fetch(
+            `${BASE}/book/instant?user_id=${rider.user_id}&pickup=${pickup}&drop=${drop}`,
+            { method: "POST" }
+        );
+
+        let data = await res.json();
+        alert("Instant Ride Booked 🚗");
+        loadMyRides();
+
+    }catch(err){
+        console.log(err);
+        alert("Instant booking failed");
+    }
+}
+
+// =====================
+// CALCULATE (FIXED)
+// =====================
+async function calc(){
+    let pickup = document.getElementById("pickup").value;
+    let drop = document.getElementById("drop").value;
+    let weekend = document.getElementById("weekend").checked;
+
+    let res = await fetch(`${BASE}/calculate-price?pickup=${pickup}&drop=${drop}&weekend=${weekend}`);
+    let data = await res.json();
+
+    document.getElementById("price").innerText =
+        `Distance: ${data.distance_km} km | ₹${data.monthly_price}`;
+}
+
+// =====================
+// CONFIRM (FIXED)
+// =====================
+async function confirmRide(){
+
+    if(rideCreated){
+        alert("Ride already booked!");
+        return;
+    }
+
+    let pickup = document.getElementById("pickup").value;
+    let drop = document.getElementById("drop").value;
+    let time = document.getElementById("pickupTime").value;
+    let returnTime = document.getElementById("returnTime").value;
+    let type = document.getElementById("rideType").value;
+
+    try{
+        let res = await fetch(
+            `${BASE}/schedule/monthly?user_id=${rider.user_id}&pickup=${pickup}&drop=${drop}&pickup_time=${time}&return_time=${returnTime}&ride_mode=${type}`,
+            { method: "POST" }
+        );
+
+        let data = await res.json();
+
+        rideCreated = true; // 🔥 THIS STOPS DUPLICATES
+
+        alert("Commute Scheduled 🚗");
+        loadMyRides();
+
+    }catch(err){
+        console.log(err);
+        alert("Error booking ride");
+    }
+}
+
+setInterval(() => {
+    if(rider.user_id){
+        loadMyRides();
+    }
+}, 3000); // refresh every 3 sec
+
 </script>
 
 </body>
